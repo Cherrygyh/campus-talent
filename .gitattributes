@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.bcmap binary
+*.pfb binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
