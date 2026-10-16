@@ -2,7 +2,7 @@ export const MAX_EDITORS = 5;
 export const EDITOR_LEASE_MS = 60_000;
 export type Presence = { limit: number; count: number; members: { name: string }[] };
 export type EditorIdentity = { sessionId: string; clientId: string; name?: string };
-export function validateIdentity(body: EditorIdentity): EditorIdentity {
+export function validateIdentity(body: EditorIdentity): Required<EditorIdentity> {
   if (
     !body ||
     typeof body.sessionId !== 'string' ||
@@ -28,12 +28,12 @@ function view(rows: Record<string, unknown>[]): Presence {
     members: rows.map((r) => ({ name: String(r.name) })),
   };
 }
-export async function readPresence(d: D1Database, now = Date.now()): Promise<Presence> {
+export async function readPresence(d: Database, now = Date.now()): Promise<Presence> {
   const r = await d.prepare(membersSql).bind(now).all();
   return view(r.results);
 }
 export async function joinEditor(
-  d: D1Database,
+  d: Database,
   input: EditorIdentity,
   now = Date.now(),
 ): Promise<Presence & { admitted: boolean }> {
@@ -59,7 +59,7 @@ export async function joinEditor(
   ]);
   return { ...view(r[2].results as Record<string, unknown>[]), admitted: r[1].results.length > 0 };
 }
-export async function leaveEditor(d: D1Database, input: EditorIdentity): Promise<Presence> {
+export async function leaveEditor(d: Database, input: EditorIdentity): Promise<Presence> {
   const body = validateIdentity(input);
   await d
     .prepare('DELETE FROM editor_sessions WHERE id=? AND client_id=?')
@@ -68,7 +68,7 @@ export async function leaveEditor(d: D1Database, input: EditorIdentity): Promise
   return readPresence(d);
 }
 export async function hasEditorLease(
-  d: D1Database,
+  d: Database,
   request: Request,
   now = Date.now(),
 ): Promise<boolean> {
@@ -80,3 +80,4 @@ export async function hasEditorLease(
     .bind(sid, cid, now)
     .first());
 }
+import type { Database } from './storage';

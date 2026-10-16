@@ -1,8 +1,8 @@
-# 拾才 · 招新面试工作台 V1.0
+# 拾才 · 招新面试工作台 V1.1
 
 学校工作室、社团线下面试使用的网页工具：收集报名表，现场搜索姓名，查看原表和材料，记录评价，再由面试官确认录用、候补或淘汰。
 
-**版本：1.0.0** · [在线使用](https://campus-talent-desk.niftylily8.chatgpt.site/)
+**版本：1.1.0** · [自有服务器部署](docs/self-hosting.md)
 
 ## 功能
 
@@ -12,7 +12,7 @@
 - 五项面试评分与分段参考、备注、六种状态、批量结果、操作记录和撤回。
 - 最多 5 个浏览器身份同时编辑，第 6 个等待；同浏览器多个标签页共用名额。
 - 并发保存校验，避免覆盖另一位面试官已保存的同一报名。
-- 云端 D1 保存报名和结果，R2 保存附件；CSV 导出、JSON 备份与合并恢复。
+- 服务器 SQLite 保存报名和结果，磁盘保存附件；CSV 导出、JSON 备份与合并恢复。
 
 按项目要求使用公开、免登录的共享工作台。任何知道网址的人均可读取资料并申请编辑席位；面试官姓名只作署名。仓库只包含程序和虚构模板，不包含线上报名数据、附件、数据库或凭据。
 
@@ -27,7 +27,7 @@
 
 ## 开发与验证
 
-需要 **Node.js 24+**、npm、Git。使用 Cloudflare Workers / Vinext / React，GitHub Pages 无法直接运行本项目服务端。
+需要 **Node.js 24+**、npm、Git。使用 Next.js / React 和本地 SQLite，可部署到自己的 Linux 服务器，无需 ChatGPT Sites 或 Cloudflare。GitHub Pages 无法直接运行本项目服务端。
 
 ```sh
 npm ci
@@ -36,16 +36,16 @@ npm run build
 npm run test:integration
 ```
 
-集成测试自动创建独立本地 D1/R2，运行接口、附件和六会话模拟，不使用线上数据库；每次运行彼此隔离。报告写入被 Git 忽略的 `outputs/`。
+首次访问接口自动初始化数据库。集成测试自动创建独立本地数据目录，运行生产服务、接口、附件、六会话模拟和重启持久化验证，不使用线上数据库。报告写入被 Git 忽略的 `outputs/`。
 
-| 命令 | 用途 |
-| --- | --- |
-| `npm run dev` | 开发服务，默认端口 5173；先初始化本地数据库 |
-| `npm start` | 预览已构建的 Worker |
-| `npm run check` | TypeScript 检查、核心规则和编辑席位单元测试 |
-| `npm run test:integration` | 独立本地库接口与五人并发回归；先构建 |
-| `npm run format` / `npm run format:check` | 格式化 / 检查业务代码格式 |
-| `npm run db:generate` | 数据结构变更后生成新迁移 |
+| 命令                                      | 用途                                          |
+| ----------------------------------------- | --------------------------------------------- |
+| `npm run dev`                             | 开发服务，默认端口 5173；自动初始化本地数据库 |
+| `npm start`                               | 预览已构建的 Next.js 服务，默认端口 3000      |
+| `npm run check`                           | TypeScript 检查、核心规则和编辑席位单元测试   |
+| `npm run test:integration`                | 独立本地库接口与五人并发回归；先构建          |
+| `npm run format` / `npm run format:check` | 格式化 / 检查业务代码格式                     |
+| `npm run db:generate`                     | 数据结构变更后生成新迁移                      |
 
 环境、数据库初始化及发布步骤见[开发和部署](docs/development.md)。
 
@@ -55,15 +55,16 @@ npm run test:integration
 app/                    页面入口、全局样式与 HTTP API
 components/interview/   工作台、报名详情、导入、设置、PDF 与协作界面
 lib/                    业务模型、导入、服务端写入、席位与版本常量
-db/                     数据表定义及 D1 接入
+db/                     数据表定义
 drizzle/                按顺序执行的 SQL 迁移和元数据
 tests/                  核心规则、席位、接口、五人协作测试
-scripts/                启动、独立测试及 Sites 平台工具
-build/                  Sites 构建插件和 Worker 入口
+scripts/                部署打包、服务管理、开机启动安装及独立测试
+lib/storage.ts          SQLite、自动迁移和磁盘附件存储
+deploy/autodl/          AutoDL 开机启动脚本
 public/                 图标、PDF.js worker、字体与字符映射
 docs/                   使用、报名格式、架构、接口、开发部署文档
 .github/workflows/      GitHub 自动验证
-.openai/hosting.json    当前 Sites 身份与存储绑定
+ecosystem.config.cjs    PM2 单进程部署配置
 ```
 
 [架构与数据流](docs/architecture.md) · [接口约定](docs/api.md) · [版本记录](CHANGELOG.md) · [第三方组件](THIRD_PARTY_NOTICES.md)

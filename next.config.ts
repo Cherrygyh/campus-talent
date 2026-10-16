@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'standalone',
+  experimental: { cpus: 2 },
+  outputFileTracingIncludes: { '/*': ['./drizzle/*.sql'] },
 };
 
 export default nextConfig;

@@ -30,6 +30,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.service.example
 
 # vercel
 .vercel
@@ -37,14 +38,7 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 
-# Maintained Vite plugin and worker sources.
-!/build/
-/build/*
-!/build/connector-preview-plugin.mjs
-!/build/connector-preview-worker.mjs
-!/build/sites-vite-plugin.LICENSE
-!/build/sites-vite-plugin.ts
-!/build/sites-worker.ts
+/build/
 
 /dist/
 /.wrangler/
@@ -54,6 +48,9 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+/data/
+/deployments/
+/.pm2/
 
 # Incremental TypeScript cache
 *.tsbuildinfo

@@ -1,17 +1,20 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist';
 const workerUrl = '/pdf.worker.min.mjs';
 export default function PdfPreview({ url }: { url: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [doc, setDoc] = useState<any>(null);
+  const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   useEffect(() => {
     let disposed = false;
-    let task: any;
+    let task: PDFDocumentLoadingTask | undefined;
+    // A new remote document must reset the loading indicator before the fetch completes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBusy(true);
     setError('');
     (async () => {
@@ -48,7 +51,9 @@ export default function PdfPreview({ url }: { url: string }) {
   useEffect(() => {
     if (!doc) return;
     let disposed = false;
-    let render: any;
+    let render: RenderTask | undefined;
+    // Page and zoom changes start a new external canvas render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBusy(true);
     (async () => {
       try {

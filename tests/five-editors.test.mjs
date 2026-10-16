@@ -9,9 +9,7 @@ import { localFetch as fetch } from './helpers/http.mjs';
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:5186';
 if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(base))
   throw new Error('此写入模拟只允许在本地测试库执行');
-const { newCandidate } = await import(
-  pathToFileURL(path.resolve('.sites-runtime/tests/talent.js')).href
-);
+const { newCandidate } = await import(pathToFileURL(path.resolve('outputs/tests/talent.js')).href);
 const result = [];
 const clients = [];
 const snapshot = async () => await (await fetch(base + '/api/state')).json();

@@ -3,17 +3,17 @@ import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-await mkdir('.sites-runtime/tests', { recursive: true });
+await mkdir('outputs/tests', { recursive: true });
 await build({
   entryPoints: ['lib/talent.ts', 'lib/importer.ts'],
-  outdir: '.sites-runtime/tests',
+  outdir: 'outputs/tests',
   bundle: true,
   platform: 'node',
   format: 'esm',
   packages: 'external',
 });
-const model = await import(pathToFileURL(path.resolve('.sites-runtime/tests/talent.js')).href);
-const importer = await import(pathToFileURL(path.resolve('.sites-runtime/tests/importer.js')).href);
+const model = await import(pathToFileURL(path.resolve('outputs/tests/talent.js')).href);
+const importer = await import(pathToFileURL(path.resolve('outputs/tests/importer.js')).href);
 const config = model.DEFAULT_CONFIG;
 const a = model.newCandidate(config, {
   name: '林同学',

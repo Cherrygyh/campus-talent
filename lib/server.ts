@@ -1,9 +1,12 @@
-import { env } from 'cloudflare:workers';
+import { getDatabase, getBucket, type Database, type PreparedStatement } from './storage';
+import { hasTrustedOrigin } from './request-origin';
 import {
   DEFAULT_CONFIG,
   Candidate,
   Config,
   Snapshot,
+  STATUSES,
+  Status,
   adoptInterviewRubric,
   findDuplicate,
   scoreIds,
@@ -34,9 +37,7 @@ export async function authorize(request: Request, write = false) {
     .slice(0, 80);
   const user = { displayName: suppliedName || '未署名面试官' };
   if (write) {
-    const origin = request.headers.get('origin');
-    if (origin && origin !== new URL(request.url).origin)
-      throw new HttpError('来源校验失败，请在本站操作', 403);
+    if (!hasTrustedOrigin(request)) throw new HttpError('来源校验失败，请在本站操作', 403);
   }
   if (write && !(await hasEditorLease(db(), request)))
     throw new HttpError('当前没有有效的编辑席位，请刷新网页重新加入；同时最多 5 位面试官', 423);
@@ -50,15 +51,11 @@ export class HttpError extends Error {
     super(message);
   }
 }
-export function db(): D1Database {
-  const d = (env as unknown as { DB?: D1Database }).DB;
-  if (!d) throw new HttpError('数据库尚未连接', 503);
-  return d;
+export function db(): Database {
+  return getDatabase();
 }
-export function bucket(): R2Bucket {
-  const b = (env as unknown as { BUCKET?: R2Bucket }).BUCKET;
-  if (!b) throw new HttpError('文件存储尚未连接', 503);
-  return b;
+export function bucket() {
+  return getBucket();
 }
 export function errorResponse(e: unknown) {
   console.error(e instanceof Error ? e.message : 'Unexpected error');
@@ -88,13 +85,13 @@ export async function snapshot(): Promise<Snapshot> {
     candidates: (res[1].results as { data: string }[]).map((x) => JSON.parse(x.data)),
     attachments: res[2].results as unknown as Snapshot['attachments'],
     events: (res[3].results as { data: string }[]).map((x) => {
-      const { changes, beforeConfig, afterConfig, ...event } = JSON.parse(x.data as string);
-      return event;
+      const { id, time, actor, summary, undoable, undone } = JSON.parse(x.data) as InternalEvent;
+      return { id, time, actor, summary, undoable, undone };
     }),
   };
 }
 export async function mutate(
-  body: Record<string, any>,
+  body: Record<string, unknown>,
   actor: string,
   attempt = 0,
 ): Promise<Snapshot & { message: string }> {
@@ -160,17 +157,20 @@ export async function mutate(
     if (
       !Array.isArray(body.ids) ||
       body.ids.length > 500 ||
-      !['待面试', '面试中', '候补', '录用', '淘汰', '缺席'].includes(body.status)
+      typeof body.status !== 'string' ||
+      !STATUSES.includes(body.status as Status)
     )
       throw new HttpError('批量操作参数无效');
     if (typeof body.reason !== 'string' || body.reason.length > 2000)
       throw new HttpError('结果备注过长');
-    for (const c of s.candidates.filter((x) => body.ids.includes(x.id))) {
+    const ids = body.ids;
+    const status = body.status as Status;
+    for (const c of s.candidates.filter((x) => ids.includes(x.id))) {
       changes.push({
         before: c,
         after: {
           ...c,
-          status: body.status,
+          status,
           updatedAt: now,
           notes: body.reason
             ? c.notes + (c.notes ? '\n' : '') + '结果备注：' + body.reason
@@ -261,14 +261,14 @@ export async function mutate(
       : {}),
   };
   const d = db();
-  const writes: D1PreparedStatement[] = [
+  const writes: PreparedStatement[] = [
     d
       .prepare(
         'UPDATE workspace SET revision=revision+1, token=?, config=? WHERE id=? AND revision=? RETURNING revision',
       )
       .bind(token, JSON.stringify(config), 'main', s.revision),
   ];
-  // Every mutation is guarded by the token set in the same atomic D1 batch.
+  // Every mutation is guarded by the token set in the same SQLite transaction.
   const upserts = changes.filter((x) => x.after).map((x) => x.after);
   const deletes = changes.filter((x) => !x.after).map((x) => x.before!.id);
   if (upserts.length)

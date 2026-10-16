@@ -148,13 +148,14 @@ export async function readPackage(
       !e.name.split('/').some((x) => x.startsWith('.')),
   );
   if (entries.length > 600) throw new Error('压缩包最多包含 600 个文件');
-  const total = entries.reduce((s, e) => s + ((e as any)._data?.uncompressedSize || 0), 0);
+  type SizedEntry = (typeof entries)[number] & { _data?: { uncompressedSize?: number } };
+  const total = entries.reduce((s, e) => s + ((e as SizedEntry)._data?.uncompressedSize || 0), 0);
   if (total > 80 * 1024 * 1024) throw new Error('解压后不能超过 80 MB，请拆分压缩包');
   const tables: Table[] = [];
   const files: File[] = [];
   const warnings: string[] = [];
   for (const entry of entries) {
-    const size = (entry as any)._data?.uncompressedSize || 0;
+    const size = (entry as SizedEntry)._data?.uncompressedSize || 0;
     if (size > 10 * 1024 * 1024) {
       warnings.push(entry.name + ' 超过 10 MB，未导入');
       continue;

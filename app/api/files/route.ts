@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     key = 'attachments/' + id;
     const time = new Date().toISOString();
     const name = file.name.replace(/[\r\n\x00]/g, '').slice(0, 200);
-    await bucket().put(key, file.stream(), { httpMetadata: { contentType: types[ext] } });
+    await bucket().put(key, file.stream());
     const event = {
       id: crypto.randomUUID(),
       time,

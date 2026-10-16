@@ -1,5 +1,6 @@
 'use client';
 import { APP_VERSION } from '../../lib/version';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
@@ -74,6 +75,8 @@ export default function Dashboard({ userName: initialName }: { userName: string 
   const [userName, setUserName] = useState(initialName);
   useEffect(() => {
     const name = localStorage.getItem('shicai-interviewer');
+    // Browser storage is unavailable during server rendering; hydrate the saved name once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (name) setUserName(name);
   }, []);
   const collaboration = useCollaboration(userName);
@@ -119,6 +122,8 @@ export default function Dashboard({ userName: initialName }: { userName: string 
     setError('');
   }, []);
   useEffect(() => {
+    // Fetch the shared workspace on mount; updates happen after the HTTP response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -147,6 +152,8 @@ export default function Dashboard({ userName: initialName }: { userName: string 
     return () => document.removeEventListener('keydown', listener);
   }, [active]);
   useEffect(() => {
+    // Reset list selection and pagination together whenever its filters change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLimit(50);
     setSelected([]);
   }, [batch, direction, status, query, page]);
@@ -386,7 +393,7 @@ export default function Dashboard({ userName: initialName }: { userName: string 
       <div className="app-shell" inert={collaboration.phase !== 'active'}>
         {sidebar && <div className="sidebar-shade" onClick={() => setSidebar(false)} />}
         <aside className={'sidebar ' + (sidebar ? 'open' : '')}>
-          <a className="brand" href="/" aria-label="拾才首页">
+          <Link className="brand" href="/" aria-label="拾才首页">
             <span className="brand-mark">拾</span>
             <div>
               <strong>
@@ -394,7 +401,7 @@ export default function Dashboard({ userName: initialName }: { userName: string 
               </strong>
               <small>招新面试工作台</small>
             </div>
-          </a>
+          </Link>
           <div className="workspace-label">
             <span className="workspace-icon">
               <GraduationCapIcon />

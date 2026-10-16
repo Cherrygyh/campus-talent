@@ -4,15 +4,15 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
-await mkdir('.sites-runtime/tests', { recursive: true });
+await mkdir('outputs/tests', { recursive: true });
 await build({
   entryPoints: ['lib/presence.ts'],
-  outfile: '.sites-runtime/tests/presence.mjs',
+  outfile: 'outputs/tests/presence.mjs',
   bundle: true,
   platform: 'node',
   format: 'esm',
 });
-const p = await import(pathToFileURL(path.resolve('.sites-runtime/tests/presence.mjs')).href);
+const p = await import(pathToFileURL(path.resolve('outputs/tests/presence.mjs')).href);
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(
   'CREATE TABLE editor_sessions (id TEXT PRIMARY KEY,client_id TEXT NOT NULL,name TEXT NOT NULL,expires_at INTEGER NOT NULL)',

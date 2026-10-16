@@ -5,9 +5,7 @@ import { localFetch } from './helpers/http.mjs';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-const { newCandidate } = await import(
-  pathToFileURL(path.resolve('.sites-runtime/tests/talent.js')).href
-);
+const { newCandidate } = await import(pathToFileURL(path.resolve('outputs/tests/talent.js')).href);
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:5186';
 const client = await editorClient(base, '接口回归');
 assert.equal(client.join.status, 200);

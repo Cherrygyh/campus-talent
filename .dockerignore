@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+.wrangler
+.sites-runtime
+outputs
+data
+deployments
+.pm2
+dist
+.env*
+*.tsbuildinfo

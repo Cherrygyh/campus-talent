@@ -1,18 +1,16 @@
-import './sites-env.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { once } from 'node:events';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-// Every run uses a new local D1/R2 directory, never the personal or hosted database.
-const state = path.resolve('.wrangler/integration', crypto.randomUUID(), 'state');
-const config = path.resolve('dist/server/wrangler.json');
-const wrangler = path.resolve('node_modules/wrangler/bin/wrangler.js');
-const envModule = pathToFileURL(path.resolve('scripts/sites-env.mjs')).href;
-const environment = { ...process.env, WRANGLER_SEND_METRICS: 'false' };
-async function run(args, env = environment) {
+const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+
+// Every run uses a fresh isolated database, never the live data directory.
+await mkdir('outputs', { recursive: true });
+const state = await mkdtemp(path.resolve('outputs/integration-'));
+async function run(args, env = process.env) {
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, { env, stdio: 'inherit' });
     child.on('error', reject);
@@ -22,24 +20,6 @@ async function run(args, env = environment) {
   });
 }
 await run(['tests/core.test.mjs']);
-await mkdir(state, { recursive: true });
-for (const file of (await readdir('drizzle')).filter((f) => f.endsWith('.sql')).sort()) {
-  await run([
-    '--import',
-    envModule,
-    wrangler,
-    'd1',
-    'execute',
-    'DB',
-    '--local',
-    '--config',
-    config,
-    '--persist-to',
-    state,
-    '--file',
-    path.resolve('drizzle', file),
-  ]);
-}
 const probe = net.createServer();
 await new Promise((resolve, reject) => {
   probe.once('error', reject);
@@ -47,48 +27,61 @@ await new Promise((resolve, reject) => {
 });
 const port = probe.address().port;
 await new Promise((resolve) => probe.close(resolve));
-// Run the built Worker directly in Miniflare. Development proxy reloads must
-// not interfere with concurrent HTTP writes in the acceptance tests.
-const { unstable_getMiniflareWorkerOptions } = await import('wrangler');
-const { Miniflare } = await import('miniflare');
-const { workerOptions, main, externalWorkers } = unstable_getMiniflareWorkerOptions(config);
-const moduleRoot = path.dirname(main);
-const modules = (await readdir(moduleRoot, { recursive: true, withFileTypes: true }))
-  .filter((entry) => entry.isFile() && /\.(m?js)$/.test(entry.name))
-  .map((entry) => ({ type: 'ESModule', path: path.join(entry.parentPath, entry.name) }))
-  .filter((entry) => entry.path !== main);
-modules.unshift({ type: 'ESModule', path: main });
-const server = new Miniflare({
-  host: '127.0.0.1',
-  port,
-  cf: false,
-  d1Persist: path.join(state, 'v3/d1'),
-  r2Persist: path.join(state, 'v3/r2'),
-  workers: [
-    {
-      ...workerOptions,
-      name: 'campus-talent-integration',
-      modules,
-      modulesRoot: moduleRoot,
-    },
-    ...externalWorkers,
-  ],
-});
-const base = (await server.ready).origin;
-let stopping;
-const stop = () => (stopping ??= server.dispose());
+const base = `http://127.0.0.1:${port}`;
+const environment = {
+  ...process.env,
+  NODE_ENV: 'production',
+  NEXT_TELEMETRY_DISABLED: '1',
+  DATA_DIR: state,
+  PORT: String(port),
+  HOSTNAME: '127.0.0.1',
+  APP_ORIGIN: base,
+};
+let child;
+async function start() {
+  child = spawn(process.execPath, ['scripts/start-server.mjs'], {
+    cwd: process.cwd(),
+    env: environment,
+    stdio: 'inherit',
+  });
+  let failure;
+  child.on('error', (error) => {
+    failure = error;
+  });
+  for (let i = 0; i < 120; i++) {
+    if (failure) throw failure;
+    if (child.exitCode !== null) throw new Error(`Server exited: ${child.exitCode}`);
+    try {
+      if ((await fetch(base + '/api/presence')).ok) return;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error('Timed out waiting for the production server');
+}
+async function stop() {
+  if (!child || child.exitCode !== null) return;
+  const exited = once(child, 'exit');
+  child.kill('SIGTERM');
+  const force = setTimeout(() => child.kill('SIGKILL'), 5000);
+  try {
+    await exited;
+  } finally {
+    clearTimeout(force);
+  }
+}
 for (const signal of ['SIGINT', 'SIGTERM'])
   process.once(signal, () => {
     void stop();
   });
 try {
+  await start();
   const initial = await (await fetch(base + '/api/state')).json();
   assert.equal(initial.candidates.length, 0, 'Integration tests require a fresh isolated database');
   const response = await fetch(base + '/');
   assert.equal(response.status, 200, 'Home page must render');
   const html = await response.text();
   assert.ok(
-    html.includes('拾才') && html.includes('1.0.0'),
+    html.includes('拾才') && html.includes(version),
     'Home page must contain the product version',
   );
   const testEnv = { ...environment, TEST_BASE_URL: base, TEST_DISPOSABLE_DB: '1' };
@@ -96,23 +89,30 @@ try {
   await run(['tests/five-editors.test.mjs'], testEnv);
   const final = await (await fetch(base + '/api/presence')).json();
   assert.equal(final.count, 0, 'All editor sessions must be released');
-  await mkdir('outputs', { recursive: true });
+  const beforeRestart = await (await fetch(base + '/api/state')).json();
+  await stop();
+  await start();
+  assert.deepEqual(
+    await (await fetch(base + '/api/state')).json(),
+    beforeRestart,
+    'Restart must preserve all data',
+  );
   await writeFile(
     'outputs/integration-summary.json',
     JSON.stringify(
       {
-        version: '1.0.0',
+        version,
         time: new Date().toISOString(),
         passed: true,
         isolatedDatabase: true,
         releasedSessions: true,
-        suites: ['home-render', 'api', 'five-editors'],
+        suites: ['home-render', 'api', 'five-editors', 'restart-persistence'],
       },
       null,
       2,
     ),
   );
-  console.log('独立测试库回归通过，测试席位已全部释放。');
+  console.log('服务器回归通过，重启后数据保留，测试席位已全部释放。');
 } finally {
   await stop();
 }
