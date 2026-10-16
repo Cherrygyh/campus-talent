@@ -25,22 +25,30 @@ fi
 cd "$service_root"
 case "${1:-start}" in
   start)
-    service_pid="$("$NODE_BIN" "$PM2_CLI" pid campus-talent | tail -n 1)"
-    if [[ "$service_pid" =~ ^[1-9][0-9]*$ ]] && kill -0 "$service_pid" 2>/dev/null; then
-      echo 'campus-talent is already running.'
-      exit 0
-    fi
-    "$NODE_BIN" "$PM2_CLI" startOrRestart ecosystem.config.cjs --update-env
+    for service_name in campus-talent campus-talent-sync; do
+      service_pid="$("$NODE_BIN" "$PM2_CLI" pid "$service_name" | tail -n 1)"
+      if [[ "$service_pid" =~ ^[1-9][0-9]*$ ]] && kill -0 "$service_pid" 2>/dev/null; then
+        echo "$service_name is already running."
+      else
+        "$NODE_BIN" "$PM2_CLI" startOrRestart ecosystem.config.cjs --only "$service_name" --update-env
+      fi
+    done
     "$NODE_BIN" "$PM2_CLI" save
     ;;
   restart)
     "$NODE_BIN" "$PM2_CLI" startOrRestart ecosystem.config.cjs --update-env
     "$NODE_BIN" "$PM2_CLI" save
     ;;
-  stop|status)
-    "$NODE_BIN" "$PM2_CLI" "$1" campus-talent
+  stop)
+    for service_name in campus-talent campus-talent-sync; do
+      service_pid="$("$NODE_BIN" "$PM2_CLI" pid "$service_name" | tail -n 1)"
+      if [[ "$service_pid" =~ ^[1-9][0-9]*$ ]] && kill -0 "$service_pid" 2>/dev/null; then
+        "$NODE_BIN" "$PM2_CLI" stop "$service_name"
+      fi
+    done
     ;;
-  logs) "$NODE_BIN" "$PM2_CLI" logs campus-talent --lines 100 ;;
+  status) "$NODE_BIN" "$PM2_CLI" status ;;
+  logs) "$NODE_BIN" "$PM2_CLI" logs --lines 100 ;;
   health) curl -fsS --connect-timeout 2 --max-time 5 "http://127.0.0.1:${PORT}/api/presence" >/dev/null ;;
   *) echo "Usage: $0 [start|restart|stop|status|logs|health]" >&2; exit 2 ;;
 esac

@@ -15,6 +15,13 @@
       "when": 1792039181237,
       "tag": "0001_swift_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792154593078,
+      "tag": "0002_registration_sync",
+      "breakpoints": true
     }
   ]
 }

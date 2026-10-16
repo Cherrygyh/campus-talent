@@ -20,5 +20,11 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+  campus-talent-sync:
+    build: .
+    command: ['node', 'registration-sync-worker.mjs']
+    restart: unless-stopped
+    volumes:
+      - campus-data:/app/data
 volumes:
   campus-data:

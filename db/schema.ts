@@ -1,4 +1,11 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  primaryKey,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 export const workspace = sqliteTable('workspace', {
   id: text('id').primaryKey(),
   revision: integer('revision').notNull().default(0),
@@ -34,4 +41,25 @@ export const editorSessions = sqliteTable(
     expiresAt: integer('expires_at').notNull(),
   },
   (table) => [index('editor_sessions_client_expiry').on(table.clientId, table.expiresAt)],
+);
+export const registrationSyncState = sqliteTable('registration_sync_state', {
+  id: text('id').primaryKey(),
+  state: text('state').notNull().default('{}'),
+  leaseOwner: text('lease_owner').notNull().default(''),
+  leaseUntil: integer('lease_until').notNull().default(0),
+});
+// Mappings survive a missing source row or locally removed candidate. A later sync
+// must report the missing association rather than silently recreating a person.
+export const registrationSyncMappings = sqliteTable(
+  'registration_sync_mappings',
+  {
+    sourceId: text('source_id').notNull(),
+    remoteId: text('remote_id').notNull(),
+    candidateId: text('candidate_id').notNull(),
+    data: text('data').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sourceId, table.remoteId] }),
+    uniqueIndex('registration_sync_candidate').on(table.sourceId, table.candidateId),
+  ],
 );

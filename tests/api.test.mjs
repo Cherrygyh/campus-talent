@@ -12,6 +12,25 @@ assert.equal(client.join.status, 200);
 const fetch = (url, options = {}) =>
   localFetch(url, { ...options, headers: { ...client.headers, ...options.headers } });
 try {
+  const syncStatus = await fetch(base + '/api/registration-sync');
+  assert.equal(syncStatus.status, 200);
+  assert.deepEqual(await syncStatus.json(), { configured: false, enabled: false, running: false });
+  const noSyncSeat = await localFetch(base + '/api/registration-sync', { method: 'POST' });
+  assert.equal(noSyncSeat.status, 423, '立即同步必须持有有效编辑席位');
+  await noSyncSeat.text();
+  const foreignSync = await fetch(base + '/api/registration-sync', {
+    method: 'POST',
+    headers: { Origin: 'https://untrusted.example' },
+  });
+  assert.equal(foreignSync.status, 403, '跨站请求不得触发同步');
+  await foreignSync.text();
+  const unconfiguredSync = await fetch(base + '/api/registration-sync', { method: 'POST' });
+  assert.equal(unconfiguredSync.status, 200);
+  assert.deepEqual(await unconfiguredSync.json(), {
+    configured: false,
+    enabled: false,
+    running: false,
+  });
   async function request(body) {
     const r = await fetch(
       base + '/api/state',

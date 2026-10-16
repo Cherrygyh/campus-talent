@@ -24,7 +24,7 @@ await cp('drizzle', migrations, { recursive: true });
 let db;
 try {
   db = new LocalDatabase(temporary, migrations);
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM _campus_migrations').first()).n, 2);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM _campus_migrations').first()).n, 3);
   await db
     .prepare('INSERT INTO candidates(id,data) VALUES (?,?)')
     .bind('persisted', '{"name":"测试"}')
@@ -45,7 +45,7 @@ try {
     (await db.prepare('SELECT data FROM candidates WHERE id=?').bind('persisted').first()).data,
     '{"name":"测试"}',
   );
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM _campus_migrations').first()).n, 2);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM _campus_migrations').first()).n, 3);
   const bucket = new LocalBucket(temporary);
   const content = '附件持久化测试';
   await bucket.put('attachments/test-file', new Blob([content]).stream());

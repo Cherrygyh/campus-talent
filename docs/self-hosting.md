@@ -31,7 +31,7 @@ APP_ORIGIN 应填写浏览器实际访问的来源，包含非标准端口。首
 | PORT       | HTTP 端口，默认 3000                                                      |
 | HOSTNAME   | 监听地址；通过平台映射访问时使用 0.0.0.0                                  |
 
-服务账号需要有 DATA_DIR 的写权限。使用单个进程，不使用 PM2 cluster 或多个副本共享同一目录。
+服务账号需要有 DATA_DIR 的写权限。网页使用单个进程，不使用 PM2 cluster 或多个网页副本共享同一目录。腾讯文档同步由独立后台进程执行，使用 SQLite 租约与事务协调写入。
 
 ## PM2 与服务管理
 
@@ -54,7 +54,7 @@ bash scripts/service.sh logs
 bash scripts/service.sh restart
 ```
 
-start 是幂等的：运行中不会创建第二个应用实例或反复重启；restart 会应用新构建及配置。PM2 在 SSH 断开后继续运行，并在应用退出时重启进程。
+start 是幂等的：分别检查网页和同步进程，已运行的进程保持运行，缺失的进程会启动；restart 会应用新构建及配置。PM2 在 SSH 断开后继续运行，并在应用退出时重启进程。[腾讯文档自动同步配置](tencent-sync.md)只保存在私有 DATA_DIR。
 
 普通 Linux/systemd 主机可按 `pm2 startup` 输出注册开机服务。执行时要使用同一个 Node.js、PM2 和 PM2_HOME，不要额外注册另一份应用。
 

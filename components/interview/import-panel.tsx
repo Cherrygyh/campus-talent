@@ -1,5 +1,6 @@
 'use client';
 import { editorHeaders } from './collaboration';
+import RegistrationSyncPanel from './registration-sync-panel';
 import { useState, useMemo, useRef } from 'react';
 import {
   Upload,
@@ -244,6 +245,7 @@ export default function ImportPanel({ state, mutate, refresh, notify }: Props) {
           下载表格模板
         </button>
       </div>
+      <RegistrationSyncPanel refresh={refresh} />
       <div className="import-options">
         <button
           className={mode === 'file' ? 'import-option active' : 'import-option'}
@@ -321,7 +323,7 @@ export default function ImportPanel({ state, mutate, refresh, notify }: Props) {
               />
             </label>
             <div className="row-between">
-              <small className="muted">需要包含表头。自动同步需另行接入腾讯文档授权。</small>
+              <small className="muted">需要包含表头。定时同步请查看上方的同步状态。</small>
               <button className="btn" onClick={pastePreview} disabled={!text.trim() || busy}>
                 预览数据
                 <ArrowRight size={16} />

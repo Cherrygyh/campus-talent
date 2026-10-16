@@ -6,6 +6,8 @@ API 服务一个公开共享工作台，JSON 响应为 `Cache-Control: no-store`
 | --- | --- | --- |
 | GET | `/api/state` | 配置、报名、附件元信息、最近 100 条操作、revision |
 | POST | `/api/state` | 保存、导入、设置、批量结果、撤回、恢复 |
+| GET | `/api/registration-sync` | 自动同步状态、最近成功时间、数量与冲突，不含 Token |
+| POST | `/api/registration-sync` | 立即同步，需有效编辑席位和同源校验；与后台共用互斥租约 |
 | GET | `/api/presence` | 上限、在线浏览器数、署名列表 |
 | POST | `/api/presence` | `join` 入场/续期，`leave` 释放标签页会话 |
 | POST | `/api/files` | multipart 字段 `candidateId`、`file` |

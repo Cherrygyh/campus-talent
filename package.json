@@ -12,7 +12,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node tests/core.test.mjs && node tests/presence.test.mjs && node tests/storage.test.mjs",
+    "test": "node tests/core.test.mjs && node tests/presence.test.mjs && node tests/storage.test.mjs && node tests/registration-sync.test.mjs && node tests/registration-sync-store.test.mjs && node tests/tencent-docs.test.mjs",
     "test:integration": "node scripts/test-integration.mjs",
     "check": "npm run typecheck && npm test",
     "format": "prettier --write app components/interview db lib tests scripts/*.mjs next.config.ts ecosystem.config.cjs",

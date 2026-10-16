@@ -1301,6 +1301,24 @@ button {
   gap: 17px;
   margin-bottom: 21px;
 }
+.registration-sync {
+  padding: 24px;
+}
+.registration-sync .helper {
+  margin: 10px 0;
+}
+.sync-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 16px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.registration-sync > a {
+  font-size: 13px;
+  text-decoration: underline;
+}
 .import-option {
   display: grid;
   grid-template-columns: auto 1fr;

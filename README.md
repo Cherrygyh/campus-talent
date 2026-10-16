@@ -6,7 +6,7 @@
 
 ## 功能
 
-- 腾讯文档复制粘贴，或导入 XLSX、CSV、TSV、ZIP；字段映射、预览、查重和附件关联。
+- 腾讯文档收集结果定时同步，保留面试评价并提示资料冲突；也支持粘贴、XLSX、CSV、TSV、ZIP 导入与附件关联。
 - 检索姓名、班级、学号、电话、邮箱和原始字段；同名提醒与人工核对。
 - 原报名表、PDF 和图片网页预览、DOCX 等附件下载。
 - 五项面试评分与分段参考、备注、六种状态、批量结果、操作记录和撤回。
@@ -64,7 +64,7 @@ deploy/autodl/          AutoDL 开机启动脚本
 public/                 图标、PDF.js worker、字体与字符映射
 docs/                   使用、报名格式、架构、接口、开发部署文档
 .github/workflows/      GitHub 自动验证
-ecosystem.config.cjs    PM2 单进程部署配置
+ecosystem.config.cjs    PM2 网页与定时同步进程配置
 ```
 
 [架构与数据流](docs/architecture.md) · [接口约定](docs/api.md) · [版本记录](CHANGELOG.md) · [第三方组件](THIRD_PARTY_NOTICES.md)
